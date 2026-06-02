@@ -8,17 +8,11 @@ export default async function handler(req, res) {
 
   try {
 
-    // 👇 AQUI (logo no início do handler)
+    //  AQUI (logo no início do handler)
     const GEMINI_KEY = process.env.GEMINI_KEY;
 
-    const chunks = [];
-
-    for await (const chunk of req) {
-      chunks.push(chunk);
-    }
-
-    const buffer = Buffer.concat(chunks);
-    const base64 = buffer.toString("base64");
+   const buffer = Buffer.from(await req.arrayBuffer());
+   const base64 = buffer.toString("base64");
 
     const prompt = `
 Extrai do documento e devolve APENAS JSON:
