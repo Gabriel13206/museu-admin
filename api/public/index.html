@@ -198,18 +198,24 @@ Salvar
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-
 const SUPABASE_URL = "https://jwubihdljxgmzdymdufs.supabase.co";
-const SUPABASE_KEY = "sb_publishable_PDGCiGQngJJCUDrSYAIA2w_VuFBLPOP";
+const SUPABASE_KEY = "SUA_CHAVE_PUBLICA_AQUI";
 
+// ⚠️ criar client correto (SEM conflito)
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-
-// ============================
-// BOTÃO IA (FUNCIONA AGORA)
-// ============================
+/* =========================
+   IA - EXTRAIR DADOS
+========================= */
 async function extrairIA() {
-  const ficheiro = document.getElementById("documento").files[0];
+  const input = document.getElementById("documento");
+  const ficheiro = input.files[0];
 
   if (!ficheiro) {
     alert("Escolhe um ficheiro primeiro!");
@@ -217,110 +223,107 @@ async function extrairIA() {
   }
 
   document.getElementById("statusIA").style.display = "block";
-  document.getElementById("statusIA").innerText = "A enviar para IA...";
+  document.getElementById("statusIA").innerText = "A analisar com IA...";
 
   try {
-    const formData = new FormData();
-    formData.append("file", ficheiro);
-
-    const resposta = await fetch("/api/extrair", {
+    const response = await fetch("/api/extrair", {
       method: "POST",
-      body: formData
+      body: ficheiro
     });
 
-    const dados = await resposta.json();
+    if (!response.ok) {
+      throw new Error("Erro na API");
+    }
 
-    console.log(dados);
+    const data = await response.json();
 
-    //  preencher automaticamente os campos
-    document.getElementById("nome").value = dados.nome || "";
-    document.getElementById("modelo").value = dados.modelo || "";
-    document.getElementById("fabricante").value = dados.fabricante || "";
-    document.getElementById("ano").value = dados.ano || "";
-    document.getElementById("descricao").value = dados.descricao || "";
+    document.getElementById("nome").value = data.nome || "";
+    document.getElementById("modelo").value = data.modelo || "";
+    document.getElementById("fabricante").value = data.fabricante || "";
+    document.getElementById("ano").value = data.ano || "";
+    document.getElementById("descricao").value = data.descricao || "";
 
-    document.getElementById("statusIA").innerText =
-      "Extração concluída com sucesso!";
+    document.getElementById("statusIA").innerText = "IA concluída ✔️";
 
   } catch (err) {
-    console.error(err);
-    document.getElementById("statusIA").innerText =
-      "Erro ao processar IA.";
+    console.log(err);
+    alert("Erro na IA");
   }
 }
 
-// ============================
-// SALVAR PEÇA
-// ============================
+/* =========================
+   SALVAR PEÇA
+========================= */
 document.getElementById("formCadastro")
 .addEventListener("submit", salvarPeca);
 
 async function salvarPeca(e) {
-e.preventDefault();
+  e.preventDefault();
 
-const codigo = "MUS-" + Date.now();
+  const codigo = "MUS-" + Date.now();
 
-const dados = {
-nome: document.getElementById("nome").value,
-modelo: document.getElementById("modelo").value,
-fabricante: document.getElementById("fabricante").value,
-ano_fabrico: document.getElementById("ano").value,
-local_uso: document.getElementById("local").value,
-gentileza: document.getElementById("gentileza").value,
-descricao_completa: document.getElementById("descricao").value,
-codigo: codigo
-};
+  const dados = {
+    nome: document.getElementById("nome").value,
+    modelo: document.getElementById("modelo").value,
+    fabricante: document.getElementById("fabricante").value,
+    ano_fabrico: document.getElementById("ano").value,
+    local_uso: document.getElementById("local").value,
+    gentileza: document.getElementById("gentileza").value,
+    descricao_completa: document.getElementById("descricao").value,
+    codigo: codigo
+  };
 
-const { error } = await supabase
-.from("pecas")
-.insert([dados]);
+  const { error } = await supabaseClient
+    .from("pecas")
+    .insert([dados]);
 
-if (error) {
-console.log(error);
-alert("Erro ao salvar!");
-return;
+  if (error) {
+    console.log(error);
+    alert("Erro ao salvar!");
+    return;
+  }
+
+  alert("Peça cadastrada com sucesso!");
+
+  document.getElementById("formCadastro").reset();
+  carregarPecas();
 }
 
-alert("Peça cadastrada com sucesso!");
-
-document.getElementById("formCadastro").reset();
-carregarPecas();
-}
-
-// ============================
-// CARREGAR PEÇAS
-// ============================
+/* =========================
+   CARREGAR PEÇAS
+========================= */
 async function carregarPecas() {
+  const { data, error } = await supabaseClient
+    .from("pecas")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-const { data, error } = await supabase
-.from("pecas")
-.select("*")
-.order("created_at", { ascending: false });
+  if (error) {
+    console.log(error);
+    return;
+  }
 
-if (error) {
-console.log(error);
-return;
+  let html = "";
+
+  data.forEach((peca) => {
+    html += `
+      <tr>
+        <td>${peca.nome || ""}</td>
+        <td>${peca.modelo || ""}</td>
+        <td>${peca.fabricante || ""}</td>
+        <td>${peca.ano_fabrico || ""}</td>
+        <td>${peca.codigo || ""}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("tabelaPecas").innerHTML = html;
 }
 
-let html = "";
-
-data.forEach(peca => {
-html += `
-<tr>
-<td>${peca.nome || ""}</td>
-<td>${peca.modelo || ""}</td>
-<td>${peca.fabricante || ""}</td>
-<td>${peca.ano_fabrico || ""}</td>
-<td>${peca.codigo || ""}</td>
-</tr>
-`;
-});
-
-document.getElementById("tabelaPecas").innerHTML = html;
-}
-
+/* =========================
+   INIT
+========================= */
 carregarPecas();
-
 </script>
 
 </body>
