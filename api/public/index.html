@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Painel Administrativo - Museu</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+font-family: Arial, sans-serif;
+}
+
+body {
+background: #f5f5f5;
+}
+
+header {
+background: #1d3557;
+color: white;
+padding: 20px;
+text-align: center;
+}
+
+.container {
+width: 95%;
+max-width: 1200px;
+margin: 20px auto;
+}
+
+.card {
+background: white;
+padding: 20px;
+border-radius: 10px;
+box-shadow: 0 2px 10px rgba(0,0,0,.1);
+margin-bottom: 20px;
+}
+
+h2 {
+margin-bottom: 15px;
+}
+
+.form-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 15px;
+}
+
+input, textarea {
+width: 100%;
+padding: 12px;
+border: 1px solid #ccc;
+border-radius: 8px;
+}
+
+textarea {
+height: 120px;
+}
+
+.full {
+grid-column: 1/3;
+}
+
+button {
+padding: 12px 20px;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+color: white;
+}
+
+.salvar {
+background: #2a9d8f;
+}
+
+.ia {
+background: #6a4c93;
+}
+
+table {
+width: 100%;
+border-collapse: collapse;
+}
+
+th {
+background: #1d3557;
+color: white;
+}
+
+th, td {
+padding: 10px;
+border: 1px solid #ddd;
+}
+
+#statusIA {
+margin-top: 10px;
+padding: 10px;
+background: #f4f4f4;
+border-radius: 6px;
+display: none;
+}
+
+@media(max-width:700px) {
+.form-grid {
+grid-template-columns: 1fr;
+}
+.full {
+grid-column: auto;
+}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+<h1>Museu das Comunicações</h1>
+<p>Painel Administrativo</p>
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Cadastro de Peça</h2>
+
+<form id="formCadastro">
+
+<div class="form-grid">
+
+<input type="text" id="nome" placeholder="Nome da peça" required>
+<input type="text" id="modelo" placeholder="Modelo">
+<input type="text" id="fabricante" placeholder="Fabricante">
+<input type="text" id="ano" placeholder="Ano de fabrico">
+<input type="text" id="local" placeholder="Local de uso">
+<input type="text" id="gentileza" placeholder="Gentileza">
+
+<div class="full">
+
+<input type="file" id="documento" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+
+<div id="statusIA">
+A processar documento...
+</div>
+
+</div>
+
+<div class="full">
+<textarea id="descricao" placeholder="Descrição completa"></textarea>
+</div>
+
+</div>
+
+<br>
+
+<button type="button" class="ia" onclick="extrairIA()">
+Extrair com IA
+</button>
+
+<button type="submit" class="salvar">
+Salvar
+</button>
+
+</form>
+
+</div>
+
+<div class="card">
+
+<h2>Peças Cadastradas</h2>
+
+<table>
+
+<thead>
+<tr>
+<th>Nome</th>
+<th>Modelo</th>
+<th>Fabricante</th>
+<th>Ano</th>
+<th>Código</th>
+</tr>
+</thead>
+
+<tbody id="tabelaPecas"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL = "https://jwubihdljxgmzdymdufs.supabase.co";
+const SUPABASE_KEY = "sb_publishable_PDGCiGQngJJCUDrSYAIA2w_VuFBLPOP";
+
+
+
+// ============================
+// BOTÃO IA (FUNCIONA AGORA)
+// ============================
+async function extrairIA() {
+    const ficheiro = document.getElementById("documento").files[0];
+
+    if (!ficheiro) {
+        alert("Escolhe um ficheiro primeiro!");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", ficheiro);
+
+    document.getElementById("statusIA").style.display = "block";
+    document.getElementById("statusIA").innerText = "A enviar para IA...";
+
+    try {
+        const res = await fetch("/api/extrair", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        console.log(data);
+
+        // EXEMPLO de preenchimento automático
+        document.getElementById("nome").value = data.nome || "";
+        document.getElementById("modelo").value = data.modelo || "";
+        document.getElementById("fabricante").value = data.fabricante || "";
+        document.getElementById("ano").value = data.ano || "";
+        document.getElementById("descricao").value = data.descricao || "";
+
+        document.getElementById("statusIA").innerText =
+            "Extração concluída com IA!";
+    } catch (err) {
+        console.error(err);
+        document.getElementById("statusIA").innerText =
+            "Erro na IA";
+    }
+}
+
+// ============================
+// SALVAR PEÇA
+// ============================
+document.getElementById("formCadastro")
+.addEventListener("submit", salvarPeca);
+
+async function salvarPeca(e) {
+e.preventDefault();
+
+const codigo = "MUS-" + Date.now();
+
+const dados = {
+nome: document.getElementById("nome").value,
+modelo: document.getElementById("modelo").value,
+fabricante: document.getElementById("fabricante").value,
+ano_fabrico: document.getElementById("ano").value,
+local_uso: document.getElementById("local").value,
+gentileza: document.getElementById("gentileza").value,
+descricao_completa: document.getElementById("descricao").value,
+codigo: codigo
+};
+
+const { error } = await supabase
+.from("pecas")
+.insert([dados]);
+
+if (error) {
+console.log(error);
+alert("Erro ao salvar!");
+return;
+}
+
+alert("Peça cadastrada com sucesso!");
+
+document.getElementById("formCadastro").reset();
+carregarPecas();
+}
+
+// ============================
+// CARREGAR PEÇAS
+// ============================
+async function carregarPecas() {
+
+const { data, error } = await supabase
+.from("pecas")
+.select("*")
+.order("created_at", { ascending: false });
+
+if (error) {
+console.log(error);
+return;
+}
+
+let html = "";
+
+data.forEach(peca => {
+html += `
+<tr>
+<td>${peca.nome || ""}</td>
+<td>${peca.modelo || ""}</td>
+<td>${peca.fabricante || ""}</td>
+<td>${peca.ano_fabrico || ""}</td>
+<td>${peca.codigo || ""}</td>
+</tr>
+`;
+});
+
+document.getElementById("tabelaPecas").innerHTML = html;
+}
+
+carregarPecas();
+
+</script>
+
+</body>
+</html>
