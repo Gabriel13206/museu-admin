@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   try {
 
     //  AQUI (logo no início do handler)
-    const GEMINI_KEY = process.env.GEMINI_KEY;
+    const GEMINI_KEY = process.env.KEY;
 
    const buffer = Buffer.from(await req.arrayBuffer());
    const base64 = buffer.toString("base64");
