@@ -209,43 +209,44 @@ const SUPABASE_KEY = "sb_publishable_PDGCiGQngJJCUDrSYAIA2w_VuFBLPOP";
 // BOTÃO IA (FUNCIONA AGORA)
 // ============================
 async function extrairIA() {
-    const ficheiro = document.getElementById("documento").files[0];
+  const ficheiro = document.getElementById("documento").files[0];
 
-    if (!ficheiro) {
-        alert("Escolhe um ficheiro primeiro!");
-        return;
-    }
+  if (!ficheiro) {
+    alert("Escolhe um ficheiro primeiro!");
+    return;
+  }
 
+  document.getElementById("statusIA").style.display = "block";
+  document.getElementById("statusIA").innerText = "A enviar para IA...";
+
+  try {
     const formData = new FormData();
     formData.append("file", ficheiro);
 
-    document.getElementById("statusIA").style.display = "block";
-    document.getElementById("statusIA").innerText = "A enviar para IA...";
+    const resposta = await fetch("/api/extrair", {
+      method: "POST",
+      body: formData
+    });
 
-    try {
-        const res = await fetch("/api/extrair", {
-            method: "POST",
-            body: formData
-        });
+    const dados = await resposta.json();
 
-        const data = await res.json();
+    console.log(dados);
 
-        console.log(data);
+    //  preencher automaticamente os campos
+    document.getElementById("nome").value = dados.nome || "";
+    document.getElementById("modelo").value = dados.modelo || "";
+    document.getElementById("fabricante").value = dados.fabricante || "";
+    document.getElementById("ano").value = dados.ano || "";
+    document.getElementById("descricao").value = dados.descricao || "";
 
-        // EXEMPLO de preenchimento automático
-        document.getElementById("nome").value = data.nome || "";
-        document.getElementById("modelo").value = data.modelo || "";
-        document.getElementById("fabricante").value = data.fabricante || "";
-        document.getElementById("ano").value = data.ano || "";
-        document.getElementById("descricao").value = data.descricao || "";
+    document.getElementById("statusIA").innerText =
+      "Extração concluída com sucesso!";
 
-        document.getElementById("statusIA").innerText =
-            "Extração concluída com IA!";
-    } catch (err) {
-        console.error(err);
-        document.getElementById("statusIA").innerText =
-            "Erro na IA";
-    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("statusIA").innerText =
+      "Erro ao processar IA.";
+  }
 }
 
 // ============================
